@@ -1,5 +1,7 @@
 # Roundtime
 
+[Download Roundtime for Windows (.zip)](https://github.com/achvanov7/Roundtime/releases/latest/download/Roundtime-Windows.zip)
+
 A Windows standup timer built with C# and WPF. Each speaker gets **1:30** by default. A shared **10:00** allowance covers overtime and clarifying questions between speakers.
 
 ![Roundtime’s Meeting tab with a sample speaker queue and the individual and shared timers](roundtime-screenshot.jpg)
