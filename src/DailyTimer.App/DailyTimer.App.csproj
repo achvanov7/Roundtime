@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>Roundtime</AssemblyName>
+    <ApplicationIcon>Assets\Roundtime.ico</ApplicationIcon>
+    <UseWPF>true</UseWPF>
+    <EnableDefaultPageItems>false</EnableDefaultPageItems>
+    <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <StartupObject>DailyTimer.App.App</StartupObject>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DailyTimer.Core\DailyTimer.Core.csproj"/>
+    <EmbeddedResource Include="MainWindow.xaml" LogicalName="Roundtime.MainWindow.xaml"/>
+    <EmbeddedResource Include="Assets\Roundtime.ico" LogicalName="Roundtime.Icon.ico"/>
+    <EmbeddedResource Include="Assets\Roundtime.Mark.xaml" LogicalName="Roundtime.Mark.xaml"/>
+  </ItemGroup>
+</Project>
