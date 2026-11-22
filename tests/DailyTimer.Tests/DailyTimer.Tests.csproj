@@ -1,4 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
-  <ItemGroup><ProjectReference Include="..\..\src\DailyTimer.Core\DailyTimer.Core.csproj"/><Compile Remove="LayoutTests.cs"/></ItemGroup>
-</Project>

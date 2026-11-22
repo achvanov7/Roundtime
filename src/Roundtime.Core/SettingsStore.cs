@@ -6,8 +6,11 @@ using System.Security;
 using System.Text;
 using System.Web.Script.Serialization;
 
-namespace DailyTimer.Core
+namespace Roundtime.Core
 {
+    public enum OvertimeSound { Classic = 0, GlassChime = 1, MorningAlarm = 2 }
+    public enum ColorTheme { Classic = 0, Forest = 1, Plum = 2 }
+
     public sealed class OvertimeRecord
     {
         public Guid SpeakerId { get; set; }
@@ -27,6 +30,9 @@ namespace DailyTimer.Core
         public List<OvertimeRecord> OvertimeHistory { get; set; }
         public MeetingSettings Settings { get; set; }
         public bool AlwaysOnTop { get; set; }
+        public OvertimeSound OvertimeSound { get; set; }
+        public int AlertVolume { get; set; }
+        public ColorTheme Theme { get; set; }
 
         public SavedConfiguration()
         {
@@ -34,6 +40,7 @@ namespace DailyTimer.Core
             SelectedTeamId = Teams[0].Id;
             OvertimeHistory = new List<OvertimeRecord>();
             Settings = new MeetingSettings();
+            AlertVolume = 100;
         }
     }
 
@@ -176,7 +183,12 @@ namespace DailyTimer.Core
                 SelectedTeamId = selected == null ? (Guid?)null : selected.Id,
                 OvertimeHistory = history,
                 Settings = configuration.Settings.Copy(),
-                AlwaysOnTop = configuration.AlwaysOnTop
+                AlwaysOnTop = configuration.AlwaysOnTop,
+                OvertimeSound = Enum.IsDefined(typeof(OvertimeSound), configuration.OvertimeSound)
+                    ? configuration.OvertimeSound : OvertimeSound.Classic,
+                AlertVolume = Math.Max(0, Math.Min(100, configuration.AlertVolume)),
+                Theme = Enum.IsDefined(typeof(ColorTheme), configuration.Theme)
+                    ? configuration.Theme : ColorTheme.Classic
             };
         }
 

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 
-namespace DailyTimer.Core
+namespace Roundtime.Core
 {
     public enum MeetingState { Ready, Speaking, Discussion, Paused, Finished }
     public enum AlertKind { PersonalExpired, SharedExpired }

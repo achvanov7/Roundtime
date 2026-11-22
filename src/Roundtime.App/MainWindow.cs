@@ -11,9 +11,9 @@ using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using DailyTimer.Core;
+using Roundtime.Core;
 
-namespace DailyTimer.App
+namespace Roundtime.App
 {
     public sealed class QueueEntry
     {
@@ -21,13 +21,11 @@ namespace DailyTimer.App
         public Guid Id { get { return speaker.Id; } }
         public string Name { get { return speaker.Name; } }
         public string Status { get; private set; }
-        public Brush StatusBrush { get; private set; }
 
         public QueueEntry(Speaker speaker, Speaker active)
         {
             this.speaker = speaker;
             Status = speaker == active ? "Speaking now" : "Waiting";
-            StatusBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(speaker == active ? "#C9F36B" : "#B0BCCB"));
         }
     }
 
@@ -77,13 +75,13 @@ namespace DailyTimer.App
             list = Control<ListBox>("SpeakerList");
             Window.Topmost = configuration.AlwaysOnTop;
             Control<CheckBox>("TopmostCheck").IsChecked = configuration.AlwaysOnTop;
-            Control<CheckBox>("SoundCheck").IsChecked = configuration.Settings.SoundEnabled;
             Control<TextBox>("PersonalSetting").Text = FormatSetting(configuration.Settings.PersonalSeconds);
             Control<TextBox>("SharedSetting").Text = FormatSetting(configuration.Settings.SharedSeconds);
             var dragFeedback = new SpeakerDragFeedback(Control<Canvas>("QueueDragOverlay"),
                 Control<Border>("QueueDragPreview"), Control<TextBlock>("QueueDragName"), Control<Border>("QueueDropMarker"));
             WireControls(dragFeedback);
             WireTeamControls(dragFeedback);
+            WirePreferences();
             RefreshTeamLists(MeetingTeam);
             LoadMeetingRoster();
             initializing = false;
@@ -120,11 +118,6 @@ namespace DailyTimer.App
             };
             Control<Button>("ApplySettingsButton").Click += delegate { ApplyDurations(); };
             Control<Button>("DismissNoticeButton").Click += delegate { Control<Border>("NoticeBorder").Visibility = Visibility.Collapsed; };
-            Control<Button>("TestSoundButton").Click += delegate {
-                if (!sounds.Play(AlertKind.PersonalExpired)) ShowNotice("The alert sound could not be played. Check your Windows audio output.");
-            };
-            Control<CheckBox>("SoundCheck").Checked += delegate { SetSound(); };
-            Control<CheckBox>("SoundCheck").Unchecked += delegate { SetSound(); };
             Control<CheckBox>("TopmostCheck").Checked += delegate { SetTopmost(); };
             Control<CheckBox>("TopmostCheck").Unchecked += delegate { SetTopmost(); };
             list.SelectionChanged += delegate { UpdateQueueButtons(); };
@@ -298,7 +291,7 @@ namespace DailyTimer.App
             Control<Button>("ResetButton").IsEnabled = meeting.HasStarted || queueEdited;
             Control<ComboBox>("MeetingTeam").IsEnabled = CanSwitchTeams && configuration.Teams.Count > 0;
             UpdateTeamDeleteButton();
-            Control<TextBlock>("SettingsHint").Text = meeting.HasStarted ? "Duration changes apply after Reset. Sound and window preferences apply immediately." : "Enter m:ss or whole minutes. Sound and window preferences apply immediately.";
+            Control<TextBlock>("SettingsHint").Text = meeting.HasStarted ? "Duration changes apply after Reset." : "Enter m:ss or whole minutes.";
         }
 
         private void ApplyDurations()
@@ -320,13 +313,6 @@ namespace DailyTimer.App
             if (meeting.HasStarted) ShowNotice("Durations saved. Reset the meeting to use the new allowances.");
         }
 
-        private void SetSound()
-        {
-            if (initializing) return;
-            configuration.Settings.SoundEnabled = Control<CheckBox>("SoundCheck").IsChecked == true;
-            Save(true);
-        }
-
         private void SetTopmost()
         {
             if (initializing) return;
@@ -337,6 +323,7 @@ namespace DailyTimer.App
 
         private bool Save(bool deliberate)
         {
+            preferencesSave.Stop();
             if (deliberate) canPersist = true;
             if (!canPersist) return false;
             string error = store.Save(configuration);

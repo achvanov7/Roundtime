@@ -1,7 +1,7 @@
 # Rebuild the Windows icon and PNG preview from the editable WPF vector mark.
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName PresentationCore, PresentationFramework, WindowsBase
-$assetDirectory = Join-Path (Split-Path $PSScriptRoot -Parent) 'src\DailyTimer.App\Assets'
+$assetDirectory = Join-Path (Split-Path $PSScriptRoot -Parent) 'src\Roundtime.App\Assets'
 $markFile = [System.IO.File]::OpenRead((Join-Path $assetDirectory 'Roundtime.Mark.xaml'))
 try { $mark = [System.Windows.Markup.XamlReader]::Load($markFile) } finally { $markFile.Dispose() }
 $mark.Freeze()

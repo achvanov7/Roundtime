@@ -6,4 +6,4 @@ using System.Runtime.CompilerServices;
 [assembly: AssemblyDescription("A standup timer with individual speaking turns and a shared discussion budget")]
 [assembly: AssemblyVersion("1.1.0.0")]
 [assembly: AssemblyFileVersion("1.1.0.0")]
-[assembly: InternalsVisibleTo("DailyTimer.LayoutTests")]
+[assembly: InternalsVisibleTo("Roundtime.LayoutTests")]

@@ -7,10 +7,10 @@
     <EnableDefaultPageItems>false</EnableDefaultPageItems>
     <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <StartupObject>DailyTimer.App.App</StartupObject>
+    <StartupObject>Roundtime.App.App</StartupObject>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DailyTimer.Core\DailyTimer.Core.csproj"/>
+    <ProjectReference Include="..\Roundtime.Core\Roundtime.Core.csproj"/>
     <EmbeddedResource Include="MainWindow.xaml" LogicalName="Roundtime.MainWindow.xaml"/>
     <EmbeddedResource Include="Assets\Roundtime.ico" LogicalName="Roundtime.Icon.ico"/>
     <EmbeddedResource Include="Assets\Roundtime.Mark.xaml" LogicalName="Roundtime.Mark.xaml"/>

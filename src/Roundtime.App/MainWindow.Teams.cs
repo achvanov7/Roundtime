@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Input;
-using DailyTimer.Core;
+using Roundtime.Core;
 
-namespace DailyTimer.App
+namespace Roundtime.App
 {
     internal sealed partial class MainWindow
     {
@@ -67,8 +67,7 @@ namespace DailyTimer.App
             meeting = new Meeting(() => clock.Elapsed.TotalSeconds,
                 roster.Select(member => new Speaker(member.Id, member.Name, member.PersonalSeconds)), configuration.Settings);
             meeting.Alert += delegate(AlertKind kind) {
-                if (configuration.Settings.SoundEnabled && !sounds.Play(kind))
-                    ShowNotice("The alert sound could not be played. The timers are still running.");
+                if (configuration.Settings.SoundEnabled) PlayAlert(kind);
             };
             meeting.TurnCompleted += RecordTurn;
             queueEdited = false;

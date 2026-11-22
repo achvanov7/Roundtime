@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace DailyTimer.Core
+namespace Roundtime.Core
 {
     public sealed class RosterMember
     {

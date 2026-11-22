@@ -1,6 +1,6 @@
 using System;
 
-namespace DailyTimer.Core
+namespace Roundtime.Core
 {
     public sealed class MeetingSettings
     {

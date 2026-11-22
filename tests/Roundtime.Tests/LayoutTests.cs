@@ -8,8 +8,8 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Markup;
 using System.Windows.Media;
-using DailyTimer.App;
-using DailyTimer.Core;
+using Roundtime.App;
+using Roundtime.Core;
 
 internal static class LayoutTests
 {
@@ -17,7 +17,6 @@ internal static class LayoutTests
     {
         public string Name { get; set; }
         public string Status { get { return "Waiting"; } }
-        public Brush StatusBrush { get { return Brushes.White; } }
     }
 
     [STAThread]
@@ -34,9 +33,11 @@ internal static class LayoutTests
             var meetingTab = (TabItem)window.FindName("MeetingTab");
             var teamsTab = (TabItem)window.FindName("TeamsTab");
             var rulesTab = (TabItem)window.FindName("RulesTab");
+            var settingsTab = (TabItem)window.FindName("SettingsTab");
             Arrange(root, 640, 440);
-            if (tabs == null || meetingTab == null || teamsTab == null || rulesTab == null || tabs.Items.Count != 3 || tabs.SelectedItem != meetingTab)
-                throw new Exception("The meeting must open in its own tab alongside Teams and Rules & rankings.");
+            if (tabs == null || meetingTab == null || teamsTab == null || rulesTab == null || settingsTab == null ||
+                tabs.Items.Count != 4 || tabs.SelectedItem != meetingTab)
+                throw new Exception("The meeting must open alongside Teams, Rules & rankings, and Settings.");
             var meetingViewport = (ScrollViewer)meetingTab.Content;
             CheckQueueScroll(window, root, meetingViewport, 1132, 740);
             if (meetingViewport.ScrollableHeight > 0)
@@ -75,6 +76,15 @@ internal static class LayoutTests
             Arrange(root, 640, 440);
             CheckReachable(window, root, rulesViewport, "ApplySettingsButton", "TopmostCheck", "OvertimeTable");
             Console.WriteLine("PASS Meeting controls and rankings are reachable in a small work area");
+            tabs.SelectedItem = settingsTab;
+            Arrange(root, 640, 440);
+            CheckReachable(window, root, (ScrollViewer)settingsTab.Content,
+                "SoundCheck", "OvertimeSoundPicker", "VolumeSlider", "TestSoundButton", "ThemePicker");
+            Console.WriteLine("PASS Sound and theme settings are reachable in a small work area");
+            CheckPreferences();
+            Console.WriteLine("PASS Themes apply immediately and alert preferences survive relaunch");
+            CheckAlertAudio();
+            Console.WriteLine("PASS Overtime tones are distinct and volume scales personal and shared alerts");
             CheckTeamQueueIsolation();
             Console.WriteLine("PASS Teams stay separate and Reset restores saved rosters after local queue changes");
             CheckSavedRosterRules();
@@ -89,6 +99,97 @@ internal static class LayoutTests
         root.Measure(new Size(width, height));
         root.Arrange(new Rect(0, 0, width, height));
         root.UpdateLayout();
+    }
+
+    private static void CheckPreferences()
+    {
+        string settings = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "preferences-" + Guid.NewGuid().ToString("N") + ".json");
+        File.WriteAllText(settings, "{\"Names\":[\"Avery\"]}");
+        try
+        {
+            var window = new MainWindow(settings).Window;
+            Color plum;
+            try
+            {
+                var sound = (ComboBox)window.FindName("OvertimeSoundPicker");
+                var theme = (ComboBox)window.FindName("ThemePicker");
+                var volume = (Slider)window.FindName("VolumeSlider");
+                var enabled = (CheckBox)window.FindName("SoundCheck");
+                if (sound.Items.Count != 3 || theme.Items.Count != 3 || volume.Minimum != 0 || volume.Maximum != 100 ||
+                    sound.SelectedIndex != 0 || theme.SelectedIndex != 0 || volume.Value != 100 || enabled.IsChecked != true)
+                    throw new Exception("Existing rosters should open with the original sound and theme at full volume.");
+
+                var classic = ((SolidColorBrush)window.Background).Color;
+                theme.SelectedIndex = 1;
+                var forest = ((SolidColorBrush)window.Background).Color;
+                theme.SelectedIndex = 2;
+                plum = ((SolidColorBrush)window.Background).Color;
+                if (classic == forest || classic == plum || forest == plum)
+                    throw new Exception("Each theme should update the visible window palette immediately.");
+                theme.SelectedIndex = 0;
+                if (((SolidColorBrush)window.Background).Color != classic)
+                    throw new Exception("Re-selecting Classic should restore the original palette.");
+                theme.SelectedIndex = 2;
+                enabled.IsChecked = false;
+                sound.SelectedIndex = 2;
+                volume.Value = 35;
+            }
+            finally { window.Close(); }
+
+            var reopened = new MainWindow(settings).Window;
+            try
+            {
+                if (((ComboBox)reopened.FindName("OvertimeSoundPicker")).SelectedIndex != 2 ||
+                    ((ComboBox)reopened.FindName("ThemePicker")).SelectedIndex != 2 ||
+                    ((SolidColorBrush)reopened.Background).Color != plum ||
+                    ((Slider)reopened.FindName("VolumeSlider")).Value != 35 ||
+                    ((CheckBox)reopened.FindName("SoundCheck")).IsChecked != false)
+                    throw new Exception("Restore the saved sound, theme, volume and sound checkbox on relaunch.");
+                AssertQueue((ListBox)reopened.FindName("SpeakerList"), "Avery");
+            }
+            finally { reopened.Close(); }
+        }
+        finally { File.Delete(settings); }
+    }
+
+    private static void CheckAlertAudio()
+    {
+        var classic = AlertSamples(AlertKind.PersonalExpired, OvertimeSound.Classic, 100);
+        var glass = AlertSamples(AlertKind.PersonalExpired, OvertimeSound.GlassChime, 100);
+        var alarm = AlertSamples(AlertKind.PersonalExpired, OvertimeSound.MorningAlarm, 100);
+        if (classic.SequenceEqual(glass) || classic.SequenceEqual(alarm) || glass.SequenceEqual(alarm))
+            throw new Exception("Each overtime sound should use its own tone.");
+        if (alarm.Length <= glass.Length || alarm.Length <= classic.Length)
+            throw new Exception("The morning alarm should play a longer pulse sequence than the chimes.");
+
+        foreach (var kind in new[] { AlertKind.PersonalExpired, AlertKind.SharedExpired })
+        {
+            var full = AlertSamples(kind, OvertimeSound.MorningAlarm, 100);
+            var quiet = AlertSamples(kind, OvertimeSound.MorningAlarm, 25);
+            var silent = AlertSamples(kind, OvertimeSound.MorningAlarm, 0);
+            if (full.All(sample => sample == 0) || quiet.Length != full.Length || silent.Length != full.Length ||
+                full.Zip(quiet, (loud, reduced) => Math.Abs(loud / 4.0 - reduced)).Any(error => error >= 1) ||
+                silent.Any(sample => sample != 0))
+                throw new Exception("Alert volume should scale the audio samples without changing the timing.");
+        }
+        if (!AlertSamples(AlertKind.SharedExpired, OvertimeSound.Classic, 100)
+            .SequenceEqual(AlertSamples(AlertKind.SharedExpired, OvertimeSound.MorningAlarm, 100)))
+            throw new Exception("Changing the overtime sound should keep the shared time expiry tone distinct.");
+    }
+
+    private static short[] AlertSamples(AlertKind kind, OvertimeSound sound, int volume)
+    {
+        using (var audio = SoundService.CreateAlert(kind, sound, volume))
+        using (var reader = new BinaryReader(audio))
+        {
+            audio.Position = 40;
+            int dataLength = reader.ReadInt32();
+            if (dataLength != audio.Length - audio.Position || dataLength < 2 || dataLength % 2 != 0)
+                throw new Exception("The WAV header must match its 16-bit audio data.");
+            var samples = new short[dataLength / 2];
+            for (int i = 0; i < samples.Length; i++) samples[i] = reader.ReadInt16();
+            return samples;
+        }
     }
 
     private static void CheckTeamQueueIsolation()

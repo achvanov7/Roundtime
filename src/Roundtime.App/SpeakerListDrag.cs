@@ -6,7 +6,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace DailyTimer.App
+namespace Roundtime.App
 {
     internal sealed class SpeakerListDrag<T> where T : class
     {
