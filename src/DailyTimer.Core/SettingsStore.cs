@@ -11,6 +11,8 @@ namespace DailyTimer.Core
     public sealed class OvertimeRecord
     {
         public Guid SpeakerId { get; set; }
+        public Guid? TeamId { get; set; }
+        public string TeamName { get; set; }
         public string Name { get; set; }
         public int CompletedTurns { get; set; }
         public int OvertimeTurns { get; set; }
@@ -20,15 +22,16 @@ namespace DailyTimer.Core
 
     public sealed class SavedConfiguration
     {
-        public List<string> Names { get; set; }
-        public List<Guid> SpeakerIds { get; set; }
+        public List<TeamRoster> Teams { get; set; }
+        public Guid? SelectedTeamId { get; set; }
         public List<OvertimeRecord> OvertimeHistory { get; set; }
         public MeetingSettings Settings { get; set; }
         public bool AlwaysOnTop { get; set; }
 
         public SavedConfiguration()
         {
-            Names = new List<string>();
+            Teams = new List<TeamRoster> { new TeamRoster { Id = Guid.NewGuid(), Name = "Default team" } };
+            SelectedTeamId = Teams[0].Id;
             OvertimeHistory = new List<OvertimeRecord>();
             Settings = new MeetingSettings();
         }
@@ -51,11 +54,14 @@ namespace DailyTimer.Core
                 object raw = serializer.DeserializeObject(File.ReadAllText(path, Encoding.UTF8));
                 var properties = raw as Dictionary<string, object>;
                 if (properties == null) throw new ArgumentException("Settings must be a JSON object.");
-                object names;
-                if (properties.TryGetValue("Names", out names) &&
-                    (!(names is object[]) || ((object[])names).Any(n => !(n is string))))
-                    throw new ArgumentException("Speaker names must be a JSON array of strings.");
-                return ValidatedCopy(serializer.ConvertToType<SavedConfiguration>(raw));
+                var fields = new Dictionary<string, object>(properties, StringComparer.OrdinalIgnoreCase);
+                object teams;
+                bool hasTeams = fields.TryGetValue("Teams", out teams);
+                if (hasTeams && !(teams is object[]))
+                    throw new ArgumentException("Teams must be a JSON array.");
+                var configuration = serializer.ConvertToType<SavedConfiguration>(raw);
+                if (!hasTeams) MigrateLegacyRoster(configuration, fields, serializer);
+                return ValidatedCopy(configuration);
             }
             catch (Exception ex)
             {
@@ -96,33 +102,78 @@ namespace DailyTimer.Core
             }
         }
 
+        private static void MigrateLegacyRoster(SavedConfiguration configuration, Dictionary<string, object> properties, JavaScriptSerializer serializer)
+        {
+            object names;
+            if (!properties.TryGetValue("Names", out names)) names = new object[0];
+            var entries = names as object[];
+            if (entries == null || entries.Any(name => !(name is string)))
+                throw new ArgumentException("Speaker names must be a JSON array of strings.");
+
+            object storedIds;
+            var ids = properties.TryGetValue("SpeakerIds", out storedIds) && storedIds != null
+                ? serializer.ConvertToType<List<Guid>>(storedIds)
+                : entries.Select(name => Guid.NewGuid()).ToList();
+            if (ids.Count != entries.Length)
+                throw new ArgumentException("Each saved speaker must have an independent identity.");
+
+            var team = configuration.Teams.Single();
+            team.Members = entries.Select((name, index) => new RosterMember { Id = ids[index], Name = (string)name }).ToList();
+            if (configuration.OvertimeHistory != null)
+                foreach (var record in configuration.OvertimeHistory)
+                    if (record != null) record.TeamId = team.Id;
+        }
+
         private static SavedConfiguration ValidatedCopy(SavedConfiguration configuration)
         {
-            if (configuration == null || configuration.Settings == null || configuration.Names == null ||
+            if (configuration == null || configuration.Settings == null || configuration.Teams == null ||
                 configuration.OvertimeHistory == null)
                 throw new ArgumentException("Incomplete settings.");
             configuration.Settings.Validate();
-            var names = configuration.Names.Select(Speaker.ValidateName).ToList();
-            // Settings written before overtime tracking only contain names.
-            var ids = configuration.SpeakerIds ?? names.Select(name => Guid.NewGuid()).ToList();
-            if (ids.Count != names.Count || ids.Contains(Guid.Empty) || ids.Distinct().Count() != ids.Count)
-                throw new ArgumentException("Each saved speaker must have an independent identity.");
+            var teams = new List<TeamRoster>();
+            var teamIds = new HashSet<Guid>();
+            var teamNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var memberIds = new HashSet<Guid>();
+            foreach (var team in configuration.Teams)
+            {
+                if (team == null || team.Id == Guid.Empty || !teamIds.Add(team.Id) || team.Members == null)
+                    throw new ArgumentException("Invalid team roster.");
+                var name = Speaker.ValidateName(team.Name);
+                if (!teamNames.Add(name)) throw new ArgumentException("Team names must be unique.");
+                var copy = new TeamRoster { Id = team.Id, Name = name };
+                foreach (var member in team.Members)
+                {
+                    if (member == null || member.Id == Guid.Empty || !memberIds.Add(member.Id))
+                        throw new ArgumentException("Each saved speaker must have an independent identity.");
+                    copy.Members.Add(new RosterMember {
+                        Id = member.Id, Name = Speaker.ValidateName(member.Name),
+                        PersonalSeconds = MeetingSettings.ValidatePersonalOverride(member.PersonalSeconds)
+                    });
+                }
+                teams.Add(copy);
+            }
+
+            var selected = teams.FirstOrDefault(team => team.Id == configuration.SelectedTeamId) ?? teams.FirstOrDefault();
 
             var history = new List<OvertimeRecord>();
+            var teamLabels = teams.ToDictionary(team => team.Id, team => team.Name);
             var recordedIds = new HashSet<Guid>();
             foreach (var record in configuration.OvertimeHistory)
             {
-                if (record == null || record.SpeakerId == Guid.Empty || !recordedIds.Add(record.SpeakerId) ||
+                if (record == null || record.SpeakerId == Guid.Empty || record.TeamId == Guid.Empty || !recordedIds.Add(record.SpeakerId) ||
                     record.CompletedTurns <= 0 || record.OvertimeTurns < 0 || record.OvertimeTurns > record.CompletedTurns)
                     throw new ArgumentException("Invalid overtime history.");
+                string teamName;
+                if (!record.TeamId.HasValue || !teamLabels.TryGetValue(record.TeamId.Value, out teamName))
+                    teamName = record.TeamName == null ? null : Speaker.ValidateName(record.TeamName);
                 history.Add(new OvertimeRecord {
-                    SpeakerId = record.SpeakerId, Name = Speaker.ValidateName(record.Name),
+                    SpeakerId = record.SpeakerId, TeamId = record.TeamId, TeamName = teamName, Name = Speaker.ValidateName(record.Name),
                     CompletedTurns = record.CompletedTurns, OvertimeTurns = record.OvertimeTurns
                 });
             }
             return new SavedConfiguration {
-                Names = names,
-                SpeakerIds = new List<Guid>(ids),
+                Teams = teams,
+                SelectedTeamId = selected == null ? (Guid?)null : selected.Id,
                 OvertimeHistory = history,
                 Settings = configuration.Settings.Copy(),
                 AlwaysOnTop = configuration.AlwaysOnTop

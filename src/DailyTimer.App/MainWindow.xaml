@@ -5,6 +5,31 @@
         Foreground="#EDF2F7" UseLayoutRounding="True" SnapsToDevicePixels="True">
   <Window.Resources>
     <SolidColorBrush x:Key="Muted" Color="#B0BCCB"/>
+    <Style x:Key="TimerCard" TargetType="Border">
+      <Setter Property="Background" Value="#223044"/>
+      <Setter Property="BorderBrush" Value="#39495E"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="16"/>
+      <Setter Property="Padding" Value="24,16"/>
+      <Setter Property="TextElement.Foreground" Value="#F2F6FA"/>
+      <Style.Triggers>
+        <Trigger Property="Grid.Row" Value="0">
+          <Setter Property="Background" Value="#F2F5F8"/>
+          <Setter Property="BorderBrush" Value="#F2F5F8"/>
+          <Setter Property="TextElement.Foreground" Value="#16263A"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="TimerReadout" TargetType="Viewbox">
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="StretchDirection" Value="DownOnly"/>
+      <Setter Property="MaxHeight" Value="74"/>
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding Path=(Grid.Row), RelativeSource={RelativeSource AncestorType=Border}}" Value="0">
+          <Setter Property="MaxHeight" Value="96"/>
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
     <Style TargetType="Button">
       <Setter Property="Background" Value="#2A394D"/>
       <Setter Property="Foreground" Value="#F5F7FA"/>
@@ -33,6 +58,11 @@
           </ControlTemplate>
         </Setter.Value>
       </Setter>
+    </Style>
+    <Style x:Key="MeetingAction" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="FontSize" Value="15"/>
+      <Setter Property="MinHeight" Value="56"/>
+      <Setter Property="Padding" Value="12,10"/>
     </Style>
     <Style TargetType="TextBox">
       <Setter Property="Background" Value="#111B29"/>
@@ -163,103 +193,216 @@
         </Setter.Value>
       </Setter>
     </Style>
+    <Style x:Key="SavedRosterItem" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+      <Setter Property="MinHeight" Value="38"/>
+    </Style>
+    <DataTemplate x:Key="SavedRosterName">
+      <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"/>
+    </DataTemplate>
+    <Style x:Key="SpeakerGrip" TargetType="Border">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Cursor" Value="SizeAll"/>
+    </Style>
   </Window.Resources>
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
     <Grid Margin="24,16,24,16">
-      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
       <Image x:Name="BrandMark" Width="40" Height="40" Margin="0,0,12,0" AutomationProperties.Name="Roundtime"/>
       <StackPanel Grid.Column="1">
         <TextBlock Text="Roundtime" FontSize="24" FontWeight="Medium"/>
         <TextBlock Text="Time for every voice" FontSize="13" Foreground="{StaticResource Muted}"/>
       </StackPanel>
-      <Border Grid.Column="2" Background="Transparent" CornerRadius="8" Padding="0,8" VerticalAlignment="Center">
-        <TextBlock x:Name="SessionState" Text="Ready to start" FontSize="12" FontWeight="Medium" Foreground="{StaticResource Muted}"/>
-      </Border>
     </Grid>
     <TabControl x:Name="WorkspaceTabs" Grid.Row="1" SelectedIndex="0" AutomationProperties.Name="Roundtime workspace">
       <TabItem x:Name="MeetingTab" Header="Meeting">
-        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" AutomationProperties.Name="Meeting workspace">
-          <Grid Margin="24,16,24,12" MinWidth="928" MinHeight="490">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Padding="24,16,24,12" AutomationProperties.Name="Meeting workspace">
+          <!-- Use the viewport to size the queue, with a minimum for compact windows. -->
+          <Grid Height="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" MinWidth="928" MaxWidth="1180" MinHeight="490">
             <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition Width="280"/><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
               <Border Background="#192637" CornerRadius="16" Padding="16">
                 <Grid>
-                  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                   <StackPanel Margin="0,0,0,16">
-                    <DockPanel><TextBlock Text="Today's speakers" FontSize="18" FontWeight="Medium"/><TextBlock x:Name="QueueCount" Text="0" HorizontalAlignment="Right" Foreground="{StaticResource Muted}" FontSize="18"/></DockPanel>
-                    <TextBlock Text="Edit names inline · drag to reorder" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,4,0,0"/>
+                    <DockPanel><TextBlock Text="Speaker queue" FontSize="18" FontWeight="Medium"/><TextBlock x:Name="QueueCount" Text="0" HorizontalAlignment="Right" Foreground="{StaticResource Muted}" FontSize="18"/></DockPanel>
+                    <TextBlock Text="Drag ≡ to reorder this meeting" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,4,0,0"/>
                   </StackPanel>
-                  <Grid Grid.Row="1" Margin="0,0,0,16">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                    <TextBox x:Name="NewName" MaxLength="120" AutomationProperties.Name="New speaker name" ToolTip="Type a name and press Enter"/>
-                    <Button x:Name="AddButton" Grid.Column="1" Content="_Add" Margin="8,0,0,0" Padding="12,8" ToolTip="Add speaker (Enter)"/>
-                  </Grid>
+                  <DockPanel Grid.Row="1" Margin="0,0,0,16">
+                    <TextBlock Text="Team" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="MeetingTeam" ItemTemplate="{StaticResource SavedRosterName}" Foreground="#16263A" MinHeight="36" Padding="8,4" VerticalContentAlignment="Center"
+                              AutomationProperties.Name="Meeting team"/>
+                  </DockPanel>
                   <Grid Grid.Row="2" MinHeight="80">
                     <ListBox x:Name="SpeakerList" Background="Transparent" BorderThickness="0" Foreground="#EDF2F7" AllowDrop="True" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" AutomationProperties.Name="Speaker queue">
                       <ListBox.ItemTemplate>
                         <DataTemplate>
                           <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="24"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                            <TextBlock Text="≡" Foreground="#9DAEC2" FontSize="18" VerticalAlignment="Center" Cursor="SizeAll" ToolTip="Drag to reorder waiting speakers"/>
+                            <Border x:Name="SpeakerDragHandle" Style="{StaticResource SpeakerGrip}" ToolTip="Drag to reorder waiting speakers">
+                              <TextBlock Text="≡" Foreground="#9DAEC2" FontSize="18" VerticalAlignment="Center" IsHitTestVisible="False"/>
+                            </Border>
                             <StackPanel Grid.Column="1">
-                              <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" MaxLength="120" BorderThickness="0" Background="Transparent" Padding="2,2" FontSize="15" AutomationProperties.Name="Speaker name" ToolTip="Click to edit name"/>
-                              <TextBlock Text="{Binding Status}" Foreground="{Binding StatusBrush}" FontSize="12" Margin="2,4,0,0"/>
+                              <TextBlock x:Name="QueueSpeakerName" Text="{Binding Name}" FontSize="15" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"/>
+                              <TextBlock Text="{Binding Status}" Foreground="{Binding StatusBrush}" FontSize="12" Margin="0,4,0,0"/>
                             </StackPanel>
                           </Grid>
+                          <DataTemplate.Triggers>
+                            <DataTrigger Binding="{Binding Status}" Value="Speaking now">
+                              <Setter TargetName="SpeakerDragHandle" Property="Visibility" Value="Hidden"/>
+                            </DataTrigger>
+                          </DataTemplate.Triggers>
                         </DataTemplate>
                       </ListBox.ItemTemplate>
                     </ListBox>
                     <StackPanel x:Name="EmptyQueue" VerticalAlignment="Center" Margin="8" IsHitTestVisible="False">
-                      <TextBlock Text="Who’s joining today?" FontSize="16" TextAlignment="Center"/>
-                      <TextBlock Text="Add names above&#10;Your queue is saved for next time" TextAlignment="Center" TextWrapping="Wrap" Foreground="{StaticResource Muted}" FontSize="12" Margin="0,8,0,0"/>
+                      <TextBlock x:Name="EmptyQueueTitle" Text="Choose a team" FontSize="16" TextAlignment="Center"/>
+                      <TextBlock x:Name="EmptyQueueHint" Text="Manage saved rosters in the Teams tab." TextAlignment="Center" TextWrapping="Wrap" Foreground="{StaticResource Muted}" FontSize="12" Margin="0,8,0,0"/>
                     </StackPanel>
                   </Grid>
                   <Grid Grid.Row="3" Margin="0,12,0,8">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                     <Button x:Name="UpButton" Content="↑ Up" Padding="8,8" ToolTip="Move selected waiting speaker up"/>
                     <Button x:Name="DownButton" Grid.Column="1" Content="↓ Down" Margin="4,0" Padding="8,8" ToolTip="Move selected waiting speaker down"/>
-                    <Button x:Name="RemoveButton" Grid.Column="2" Content="Remove" Padding="8,8" Foreground="#FFC5B4" ToolTip="Remove selected speaker"/>
+                    <Button x:Name="RemoveButton" Grid.Column="2" Content="Remove" Padding="8,8" Foreground="#FFC5B4" ToolTip="Remove the selected speaker from this meeting"/>
                   </Grid>
-                  <Button x:Name="ShuffleButton" Grid.Row="4" Content="Shuffle remaining speakers" ToolTip="Only people who haven't started are shuffled"/>
                 </Grid>
               </Border>
-              <Grid Grid.Column="2">
-                <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="16"/><RowDefinition Height="112"/><RowDefinition Height="16"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                <Border x:Name="PersonalCard" Background="#F2F5F8" CornerRadius="16" Padding="24,24">
-                  <Grid>
-                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                    <DockPanel><TextBlock Text="Current speaker" Foreground="#566579" FontSize="12" FontWeight="Medium"/><TextBlock x:Name="ProgressLabel" HorizontalAlignment="Right" Foreground="#566579" FontSize="12"/></DockPanel>
-                    <TextBlock x:Name="CurrentName" Grid.Row="1" Text="Ready for your team" Foreground="#16263A" FontSize="32" FontWeight="Medium" TextTrimming="CharacterEllipsis" Margin="0,8,0,0"/>
-                    <Viewbox Grid.Row="2" Stretch="Uniform" HorizontalAlignment="Left" MaxHeight="160" Margin="0,16,0,16">
-                      <TextBlock x:Name="PersonalTime" Text="01:30" Foreground="#16263A" FontFamily="Segoe UI" FontSize="112" FontWeight="Normal" Typography.NumeralAlignment="Tabular"/>
-                    </Viewbox>
-                    <ProgressBar x:Name="PersonalProgress" Grid.Row="3" Height="4" Minimum="0" Maximum="1" Value="1" Foreground="#527B32" Background="#DAE1E8" BorderThickness="0"/>
-                    <TextBlock x:Name="PersonalHint" Grid.Row="4" Text="Progress, plans, blockers" Foreground="#566579" FontSize="12" Margin="0,16,0,0" TextWrapping="Wrap"/>
+              <StackPanel Grid.Column="2" VerticalAlignment="Top">
+                <Grid Margin="0,0,0,16">
+                  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                  <TextBlock Text="Current speaker" Foreground="{StaticResource Muted}" FontSize="13" FontWeight="Medium"/>
+                  <TextBlock x:Name="ProgressLabel" HorizontalAlignment="Right" Foreground="{StaticResource Muted}" FontSize="13"/>
+                  <TextBlock x:Name="CurrentName" Grid.Row="1" Text="Ready for your team" FontSize="42" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,4,0,0"/>
+                </Grid>
+                <Grid>
+                  <Grid.RowDefinitions><RowDefinition Height="152"/><RowDefinition Height="12"/><RowDefinition Height="128"/></Grid.RowDefinitions>
+                  <Border x:Name="PersonalCard" Style="{StaticResource TimerCard}">
+                    <Grid>
+                      <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                      <StackPanel VerticalAlignment="Center" Margin="0,0,20,0">
+                        <TextBlock Text="Personal time" FontSize="17" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="PersonalHint" Text="Progress, plans, blockers" FontSize="13" Opacity="0.8" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                      </StackPanel>
+                      <Viewbox Grid.Column="1" Style="{StaticResource TimerReadout}">
+                        <TextBlock x:Name="PersonalTime" Text="01:30" FontSize="72" Typography.NumeralAlignment="Tabular"/>
+                      </Viewbox>
+                      <ProgressBar x:Name="PersonalProgress" Grid.Row="1" Grid.ColumnSpan="2" Height="4" Margin="0,8,0,0" Minimum="0" Maximum="1" Value="1" Foreground="#527B32" Background="#DAE1E8" BorderThickness="0"/>
+                    </Grid>
+                  </Border>
+                  <Border x:Name="SharedCard" Grid.Row="2" Style="{StaticResource TimerCard}">
+                    <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                      <StackPanel VerticalAlignment="Center" Margin="0,0,20,0">
+                        <TextBlock x:Name="SharedTitle" Text="Shared discussion" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="SharedHint" Text="For overtime and questions between speakers" FontSize="13" Opacity="0.8" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                      </StackPanel>
+                      <Viewbox Grid.Column="1" Style="{StaticResource TimerReadout}">
+                        <TextBlock x:Name="SharedTime" Text="10:00" FontSize="72" Typography.NumeralAlignment="Tabular"/>
+                      </Viewbox>
+                    </Grid>
+                  </Border>
+                </Grid>
+                <UniformGrid Columns="4" Margin="0,16,0,0">
+                  <Button x:Name="StartButton" Content="_Start meeting" Style="{StaticResource MeetingAction}" Background="#C9F36B" Foreground="#172435" BorderBrush="Transparent" Margin="0,0,8,0"/>
+                  <Grid Margin="0,0,8,0">
+                    <Button x:Name="DiscussButton" Content="Start _discussion" Style="{StaticResource MeetingAction}"/>
+                    <Button x:Name="ReturnButton" Content="Back to speaker" Style="{StaticResource MeetingAction}" Visibility="Collapsed"/>
                   </Grid>
-                </Border>
-                <Border x:Name="SharedCard" Grid.Row="2" Background="#223044" CornerRadius="12" Padding="20,16" BorderBrush="#39495E" BorderThickness="1">
-                  <Grid>
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
-                      <TextBlock x:Name="SharedTitle" Text="Shared discussion" Foreground="{StaticResource Muted}" FontSize="12" FontWeight="Medium"/>
-                      <TextBlock x:Name="SharedHint" Text="For overtime and questions between speakers" Foreground="#B0BCCB" TextWrapping="Wrap" FontSize="12" Margin="0,8,0,0"/>
-                    </StackPanel>
-                    <TextBlock x:Name="SharedTime" Grid.Column="1" Text="10:00" FontFamily="Segoe UI" FontSize="44" FontWeight="Normal" Typography.NumeralAlignment="Tabular" VerticalAlignment="Center"/>
-                  </Grid>
-                </Border>
-                <WrapPanel Grid.Row="4">
-                  <Button x:Name="StartButton" Content="_Start meeting" Background="#C9F36B" Foreground="#172435" BorderBrush="Transparent" MinWidth="128" Margin="0,0,8,8" Padding="16,12"/>
-                  <Button x:Name="DiscussButton" Content="End speech / _Discuss" Margin="0,0,8,8" Padding="16,12"/>
-                  <Button x:Name="NextButton" Content="_Next speaker →" Margin="0,0,8,8" Padding="16,12"/>
-                  <Button x:Name="ResetButton" Content="Reset" Background="Transparent" BorderBrush="Transparent" Foreground="#B0BCCB" Padding="12,12" Margin="0,0,0,8"/>
-                </WrapPanel>
-              </Grid>
+                  <Button x:Name="NextButton" Content="_Next speaker →" Style="{StaticResource MeetingAction}" Margin="0,0,8,0"/>
+                  <Button x:Name="ResetButton" Content="Reset" Style="{StaticResource MeetingAction}" Background="Transparent" BorderBrush="Transparent" Foreground="#B0BCCB"/>
+                </UniformGrid>
+              </StackPanel>
             </Grid>
             <TextBlock Grid.Row="1" Text="Alt+S start/pause · Alt+D discuss · Alt+N next speaker" Foreground="#9DAEC2" FontSize="12" Margin="0,12,0,0"/>
+          </Grid>
+        </ScrollViewer>
+      </TabItem>
+      <TabItem x:Name="TeamsTab" Header="Teams">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="24,16,24,12"
+                      HorizontalContentAlignment="Stretch" AutomationProperties.Name="Team rosters">
+          <Grid Height="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" MinHeight="392" MaxWidth="900">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="224"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Border Background="#192637" CornerRadius="16" Padding="16">
+              <Grid>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <TextBlock Text="Saved teams" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                <ListBox x:Name="TeamsList" Grid.Row="1" Background="Transparent" BorderThickness="0" Foreground="#EDF2F7"
+                         ItemTemplate="{StaticResource SavedRosterName}" ItemContainerStyle="{StaticResource SavedRosterItem}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" AutomationProperties.Name="Saved teams"/>
+                <StackPanel Grid.Row="2" Margin="0,12,0,0">
+                  <TextBlock Text="Team name" FontSize="13" Foreground="{StaticResource Muted}" Margin="0,0,0,6"/>
+                  <TextBox x:Name="TeamNameInput" MaxLength="120" AutomationProperties.Name="Team name"/>
+                  <UniformGrid Columns="2" Margin="0,8,0,0">
+                    <Button x:Name="AddTeamButton" Content="Add team" Margin="0,0,4,0" Padding="8,8" ToolTip="Create a team with the entered name"/>
+                    <Button x:Name="RenameTeamButton" Content="Rename" Margin="4,0,0,0" Padding="8,8" ToolTip="Rename the selected team"/>
+                  </UniformGrid>
+                  <Button x:Name="DeleteTeamButton" Content="Delete team" Foreground="#FFC5B4" Background="Transparent" Margin="0,8,0,0" ToolTip="Delete the selected team and its saved roster"/>
+                </StackPanel>
+              </Grid>
+            </Border>
+            <Border Grid.Column="2" Background="#192637" CornerRadius="16" Padding="16">
+              <Grid>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <StackPanel Margin="0,0,0,12">
+                  <TextBlock Text="Saved roster" FontSize="13" Foreground="{StaticResource Muted}"/>
+                  <TextBlock x:Name="RosterHeading" Text="Choose a team" FontSize="24" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <ListBox x:Name="RosterList" Grid.Row="1" Background="Transparent" BorderThickness="0" Foreground="#EDF2F7" AllowDrop="True"
+                         ItemContainerStyle="{StaticResource SavedRosterItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto" AutomationProperties.Name="Saved roster">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="24"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <Border x:Name="SpeakerDragHandle" Style="{StaticResource SpeakerGrip}" ToolTip="Drag to reorder the saved roster">
+                          <TextBlock Text="≡" Foreground="#9DAEC2" FontSize="18" VerticalAlignment="Center" IsHitTestVisible="False"/>
+                        </Border>
+                        <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding Name}"/>
+                        <TextBlock x:Name="PersonalOverride" Grid.Column="2" Text="{Binding PersonalSeconds, StringFormat={}{0} s}"
+                                   Foreground="{StaticResource Muted}" Margin="12,0,0,0" VerticalAlignment="Center" ToolTip="Custom personal time"/>
+                      </Grid>
+                      <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Binding PersonalSeconds}" Value="{x:Null}">
+                          <Setter TargetName="PersonalOverride" Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                      </DataTemplate.Triggers>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <StackPanel Grid.Row="2" Margin="0,12,0,0">
+                  <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="132"/></Grid.ColumnDefinitions>
+                    <StackPanel>
+                      <TextBlock Text="Speaker name" FontSize="13" Foreground="{StaticResource Muted}" Margin="0,0,0,6"/>
+                      <TextBox x:Name="MemberNameInput" MaxLength="120" AutomationProperties.Name="Saved speaker name"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                      <TextBlock Text="Personal time" FontSize="13" Foreground="{StaticResource Muted}" Margin="0,0,0,6"/>
+                      <TextBox x:Name="MemberPersonalTimeInput" MaxLength="6" AutomationProperties.Name="Personal time override"
+                               ToolTip="Enter seconds or m:ss. Leave blank for the meeting default."/>
+                    </StackPanel>
+                  </Grid>
+                  <TextBlock Text="Enter seconds or m:ss. Blank uses the default. Press Enter to save the selected speaker." TextWrapping="Wrap" FontSize="12"
+                             Foreground="{StaticResource Muted}" Margin="0,6,0,0"/>
+                  <WrapPanel Margin="0,8,0,0">
+                    <Button x:Name="SaveMemberButton" Content="Save speaker" Background="#C9F36B" Foreground="#172435" BorderBrush="Transparent"
+                            Margin="0,0,8,0" Padding="10,8" ToolTip="Save the selected speaker's name and personal time"/>
+                    <Button x:Name="AddMemberButton" Content="Add speaker" Padding="10,8"/>
+                    <TextBlock x:Name="MemberSaveStatus" Foreground="#C9F36B" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                  </WrapPanel>
+                  <WrapPanel Margin="0,8,0,0">
+                    <Button x:Name="MoveMemberUpButton" Content="↑ Up" Margin="0,0,8,0" Padding="10,8" ToolTip="Move the selected speaker up in the saved roster"/>
+                    <Button x:Name="MoveMemberDownButton" Content="↓ Down" Margin="0,0,8,0" Padding="10,8" ToolTip="Move the selected speaker down in the saved roster"/>
+                    <Button x:Name="RemoveMemberButton" Content="Remove" Foreground="#FFC5B4" Padding="10,8" ToolTip="Remove the selected speaker from this saved roster"/>
+                  </WrapPanel>
+                </StackPanel>
+              </Grid>
+            </Border>
           </Grid>
         </ScrollViewer>
       </TabItem>
@@ -269,7 +412,7 @@
             <Border Background="#192637" CornerRadius="12" Padding="16">
               <StackPanel>
                 <TextBlock Text="Meeting rules" FontSize="18" FontWeight="Medium"/>
-                <TextBlock Text="Shared time covers questions and overtime. It starts when the personal timer expires or you select End speech / Discuss." Foreground="{StaticResource Muted}" FontSize="13" TextWrapping="Wrap" Margin="0,6,0,16"/>
+                <TextBlock Text="Shared time covers questions and overtime. It starts when the personal timer expires or you select Start discussion." Foreground="{StaticResource Muted}" FontSize="13" TextWrapping="Wrap" Margin="0,6,0,16"/>
                 <WrapPanel>
                   <TextBlock Text="Per speaker" VerticalAlignment="Center" Margin="0,0,8,8" FontSize="12"/>
                   <TextBox x:Name="PersonalSetting" Width="64" MaxLength="6" Text="1:30" Margin="0,0,16,8" AutomationProperties.Name="Personal duration in minutes and seconds"/>
@@ -325,6 +468,7 @@
                   </DataGrid.CellStyle>
                   <DataGrid.Columns>
                     <DataGridTextColumn Header="Speaker" Width="*" Binding="{Binding Name}" ElementStyle="{StaticResource SpeakerText}"/>
+                    <DataGridTextColumn Header="Team" Width="*" Binding="{Binding TeamName}" ElementStyle="{StaticResource SpeakerText}"/>
                     <DataGridTextColumn Header="Overtime rate" Width="115" Binding="{Binding OvertimeRate, StringFormat=P1}" ElementStyle="{StaticResource TableText}"/>
                     <DataGridTextColumn Header="Overtime turns" Width="115" Binding="{Binding OvertimeTurns}" ElementStyle="{StaticResource TableText}"/>
                     <DataGridTextColumn Header="Total turns" Width="96" Binding="{Binding CompletedTurns}" ElementStyle="{StaticResource TableText}"/>
@@ -339,5 +483,11 @@
     <Border x:Name="NoticeBorder" Grid.Row="2" Background="#493C2A" CornerRadius="8" Margin="24,0,24,12" Padding="12,8" Visibility="Collapsed">
       <DockPanel><Button x:Name="DismissNoticeButton" DockPanel.Dock="Right" Content="Dismiss" Padding="8,4" Margin="12,0,0,0"/><TextBlock x:Name="NoticeText" Foreground="#FFE3AC" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"/></DockPanel>
     </Border>
+    <Canvas x:Name="QueueDragOverlay" Grid.RowSpan="3" IsHitTestVisible="False" ClipToBounds="True">
+      <Border x:Name="QueueDropMarker" Height="2" CornerRadius="1" Background="#C9F36B" Visibility="Collapsed"/>
+      <Border x:Name="QueueDragPreview" MaxWidth="220" Padding="12,7" CornerRadius="8" Background="#293B4B" BorderBrush="#C9F36B" BorderThickness="1" Visibility="Collapsed">
+        <TextBlock x:Name="QueueDragName" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
+      </Border>
+    </Canvas>
   </Grid>
 </Window>

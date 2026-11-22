@@ -26,11 +26,22 @@ namespace DailyTimer.Core
 
         public void Validate()
         {
-            if (double.IsNaN(PersonalSeconds) || double.IsInfinity(PersonalSeconds) ||
-                PersonalSeconds < 1 || PersonalSeconds > 3600 ||
+            if (!IsValidPersonalDuration(PersonalSeconds) ||
                 double.IsNaN(SharedSeconds) || double.IsInfinity(SharedSeconds) ||
                 SharedSeconds < 1 || SharedSeconds > 14400)
                 throw new ArgumentException("Personal time must be 0:01–60:00 and discussion time 0:01–240:00.");
+        }
+
+        public static bool IsValidPersonalDuration(double seconds)
+        {
+            return seconds >= 1 && seconds <= 3600;
+        }
+
+        internal static int? ValidatePersonalOverride(int? seconds)
+        {
+            if (seconds.HasValue && !IsValidPersonalDuration(seconds.Value))
+                throw new ArgumentException("A speaker's personal time must be 0:01–60:00.");
+            return seconds;
         }
     }
 }

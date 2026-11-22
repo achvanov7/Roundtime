@@ -45,6 +45,43 @@ internal static class Program
             Near(0, m.PersonalRemaining); Near(600, m.SharedRemaining);
             Check(alerts.SequenceEqual(new[] { AlertKind.PersonalExpired }), "Single alert");
         });
+        Test("Each speaker gets their own allowance or the meeting default", () => {
+            var c = new Clock();
+            var first = new Speaker(Guid.NewGuid(), "A", 30);
+            var second = new Speaker("B");
+            var third = new Speaker(Guid.NewGuid(), "C", 45);
+            var m = new Meeting(() => c.Now, new[] { first, second, third }, new MeetingSettings());
+            Near(30, m.PersonalRemaining);
+            m.StartOrTogglePause();
+            Near(30, m.PersonalAllowance);
+            c.Now = 35; m.Tick();
+            Check(m.State == MeetingState.Discussion, "The custom deadline starts shared discussion");
+            Near(0, m.PersonalRemaining); Near(595, m.SharedRemaining);
+            m.Next();
+            Check(m.ActiveSpeaker == second, "Advance to the next speaker");
+            Near(90, m.PersonalRemaining); Near(90, m.PersonalAllowance);
+            m.StartOrTogglePause(); m.Next();
+            Check(m.State == MeetingState.Paused && m.ActiveSpeaker == third, "Advance while paused");
+            Near(45, m.PersonalRemaining); Near(45, m.PersonalAllowance);
+            Near(595, m.SharedRemaining);
+        });
+        Test("The ready timer previews the first speaker's allowance after queue edits", () => {
+            var c = new Clock();
+            var first = new Speaker(Guid.NewGuid(), "A", 30);
+            var second = new Speaker("B");
+            var m = new Meeting(() => c.Now, new[] { first, second }, new MeetingSettings());
+            m.Move(second.Id, 0);
+            Near(90, m.PersonalRemaining);
+            m.Remove(second.Id);
+            Near(30, m.PersonalRemaining);
+            m.StartOrTogglePause();
+            Near(30, m.PersonalRemaining);
+            c.Now = 10; m.Discuss();
+            c.Now = 15; m.ReturnToSpeaker();
+            Near(20, m.PersonalRemaining); Near(30, m.PersonalAllowance); Near(595, m.SharedRemaining);
+            m.Reset();
+            Near(30, m.PersonalRemaining);
+        });
         Test("Delayed refresh consumes personal remainder then shared remainder", () => {
             var c = new Clock(); var m = Create(c, "A"); m.StartOrTogglePause();
             c.Now = 105.25; m.Tick(); Near(584.75, m.SharedRemaining);
@@ -53,6 +90,36 @@ internal static class Program
             var c = new Clock(); var m = Create(c, "A"); m.StartOrTogglePause();
             c.Now = 20; m.Discuss(); c.Now = 35; m.Tick();
             Near(70, m.PersonalRemaining); Near(585, m.SharedRemaining);
+        });
+        Test("Returning from discussion resumes the same speaker with both balances intact", () => {
+            var c = new Clock(); var m = Create(c, "A", "B"); m.StartOrTogglePause();
+            var speaker = m.ActiveSpeaker;
+            c.Now = 20; m.Discuss();
+            Check(m.CanReturnToSpeaker, "Early discussion should allow a return");
+            c.Now = 35; m.ReturnToSpeaker();
+            Check(m.State == MeetingState.Speaking && m.ActiveSpeaker == speaker && !speaker.Completed, "Resume the original turn");
+            Near(70, m.PersonalRemaining); Near(585, m.SharedRemaining);
+            Check(!m.CanReturnToSpeaker, "Already speaking");
+            c.Now = 45; m.Discuss(); c.Now = 50; m.Tick();
+            Near(60, m.PersonalRemaining); Near(580, m.SharedRemaining);
+        });
+        Test("Returning to the speaker from paused discussion leaves the timers paused", () => {
+            var c = new Clock(); var m = Create(c, "A"); m.StartOrTogglePause();
+            c.Now = 20; m.Discuss(); c.Now = 30; m.StartOrTogglePause();
+            Check(m.CanReturnToSpeaker, "Paused discussion with personal time left can return");
+            c.Now = 100; m.ReturnToSpeaker(); c.Now = 120; m.Tick();
+            Check(m.State == MeetingState.Paused && m.Phase == MeetingState.Speaking, "Stay paused in the speaking phase");
+            Near(70, m.PersonalRemaining); Near(590, m.SharedRemaining);
+            m.StartOrTogglePause(); c.Now = 125; m.Tick();
+            Near(65, m.PersonalRemaining); Near(590, m.SharedRemaining);
+        });
+        Test("Discussion cannot return to a speaker whose personal time expired", () => {
+            var c = new Clock(); var m = Create(c, "A"); m.StartOrTogglePause();
+            c.Now = 90; m.Tick();
+            Check(!m.CanReturnToSpeaker, "An exhausted turn cannot resume");
+            c.Now = 95; m.ReturnToSpeaker();
+            Check(m.State == MeetingState.Discussion, "Continue discussion after personal expiry");
+            Near(0, m.PersonalRemaining); Near(595, m.SharedRemaining);
         });
         Test("Only personal timer expiry counts as overtime on a completed turn", () => {
             var c = new Clock(); var m = Create(c, "Same name", "Same name");

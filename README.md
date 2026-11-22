@@ -16,16 +16,18 @@ For another Windows computer, copy the three application files together or extra
 
 ## Run a meeting
 
-1. Type a name and press **Enter** or **Add**. Click a name in the queue to edit it; leave the field or press Enter to save.
-2. Reorder waiting speakers using their **≡** drag handle, **Up/Down**, or **Shuffle remaining speakers**. Select a row to remove an absent person. Once started, completed and current speakers stay fixed while the waiting queue can change.
+1. Open **Teams** to create teams and manage their saved rosters. Select a team or speaker to edit its name. Drag a speaker's **≡** handle or use **Up/Down** to set the roster's saved order.
+2. On **Meeting**, choose a team. Reorder waiting speakers using their **≡** drag handle or **Up/Down**, or select someone to remove them from this meeting. The current speaker appears first and completed speakers leave the visible queue.
 3. Press **Start meeting**. The personal allowance counts down.
-4. When personal time expires, a two-note alert plays and the shared allowance starts automatically. **End speech / Discuss** starts shared time early for questions; unused personal time is not added to the shared budget.
+4. When personal time expires, a two-note alert plays and the shared allowance starts automatically. Choose **Start discussion** to use shared time for questions early. **Back to speaker** resumes the current speaker's remaining personal time and leaves the shared balance where it is.
 5. Press **Next speaker** to stop consuming shared time and start the next person's full personal allowance. You can also advance before any discussion.
 6. **Pause/Resume** affects both timers. Advancing while paused keeps the next slot paused.
 7. Shared expiry plays a different alert and shows negative overtime. The meeting can continue. After the last discussion, press **Finish meeting**.
-8. **Reset** restores the allowances and marks everyone waiting, preserving the roster and order.
+8. **Reset** restores the allowances and reloads the team's saved roster and order. The team selector is available before a meeting and after it finishes.
 
-Removing the active speaker asks for confirmation and advances to the next waiting person. Adding someone after a meeting has finished includes them in the next meeting after Reset.
+Removing the active speaker asks for confirmation and advances to the next waiting person. Changes made to the queue on **Meeting** apply for that meeting. To change the saved roster, use **Teams**. Edits made during a meeting appear the next time its roster is loaded.
+
+To customize a speaker's turn, select them on **Teams** and enter **Personal time** as seconds or `m:ss`. Press Enter or choose **Save speaker**. A blank field uses the meeting default.
 
 ## Overtime rankings
 
@@ -33,13 +35,13 @@ Open **Rules & rankings** to see speakers sorted by their all-time overtime perc
 
 ![Roundtime’s Rules & rankings tab showing meeting settings and overtime results for three sample speakers](roundtime-rankings.jpg)
 
-**Next speaker** and **Finish meeting** record the current turn. Rankings carry over between meetings and app launches. Removing a speaker from the queue keeps their history. Adding them back under the same name restores their history when there is a single match.
+**Next speaker** and **Finish meeting** record the current turn. Rankings identify each speaker's team and carry over between meetings and app launches. Removing a speaker keeps their history. Adding them back to the same team under the same name restores their history when there is a single match.
 
 ## Settings
 
 Use **Meeting rules** on the **Rules & rankings** tab to change personal and shared durations, toggle sounds, test the personal alert, or keep the window on top. Enter `m:ss` or whole minutes, then select **Apply**. The personal allowance supports 1 second to 60 minutes. The shared allowance supports 1 second to 240 minutes. During a meeting, duration changes apply after Reset. Sound and window preferences apply immediately.
 
-The roster, order, allowances, and preferences are saved per Windows user in `%LOCALAPPDATA%\DailyTimer\settings.json`. Roundtime keeps this original data location so existing DailyTimer rosters and preferences continue to work. Relaunch starts a fresh, paused meeting. Live progress is not restored. A damaged or inaccessible file produces a notice and usable defaults; the app does not overwrite an unreadable file until you deliberately change something.
+Teams, saved rosters, the selected team, allowances, and preferences are saved per Windows user in `%LOCALAPPDATA%\DailyTimer\settings.json`. An existing single roster appears under **Default team**, along with its overtime history. Relaunch loads the selected team's saved roster for a fresh meeting. A damaged or inaccessible file produces a notice and usable defaults. Roundtime waits for a deliberate change before overwriting an unreadable file.
 
 Optional isolated settings file for testing:
 

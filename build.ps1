@@ -28,7 +28,7 @@ if ($appSources.Count -gt 0) {
     Compile (@('/target:winexe', "/out:$outputDir\Roundtime.exe", "/reference:$outputDir\DailyTimer.Core.dll", "/reference:$wpf\PresentationFramework.dll", "/reference:$wpf\PresentationCore.dll", "/reference:$wpf\WindowsBase.dll", '/reference:System.Xaml.dll', "/resource:$projectRoot\src\DailyTimer.App\MainWindow.xaml,Roundtime.MainWindow.xaml", "/resource:$projectRoot\src\DailyTimer.App\Assets\Roundtime.ico,Roundtime.Icon.ico", "/resource:$projectRoot\src\DailyTimer.App\Assets\Roundtime.Mark.xaml,Roundtime.Mark.xaml", "/win32icon:$projectRoot\src\DailyTimer.App\Assets\Roundtime.ico", "/win32manifest:$projectRoot\src\DailyTimer.App\app.manifest") + $appSources)
     Copy-Item -LiteralPath (Join-Path $projectRoot 'src\DailyTimer.App\App.config') -Destination (Join-Path $outputDir 'Roundtime.exe.config') -Force
     if ($Test) {
-        Compile @('/target:exe', "/out:$outputDir\DailyTimer.LayoutTests.exe", "/reference:$wpf\PresentationFramework.dll", "/reference:$wpf\PresentationCore.dll", "/reference:$wpf\WindowsBase.dll", '/reference:System.Xaml.dll', (Join-Path $projectRoot 'tests\DailyTimer.Tests\LayoutTests.cs'))
+        Compile @('/target:exe', "/out:$outputDir\DailyTimer.LayoutTests.exe", "/reference:$outputDir\Roundtime.exe", "/reference:$outputDir\DailyTimer.Core.dll", "/reference:$wpf\PresentationFramework.dll", "/reference:$wpf\PresentationCore.dll", "/reference:$wpf\WindowsBase.dll", '/reference:System.Xaml.dll', (Join-Path $projectRoot 'tests\DailyTimer.Tests\LayoutTests.cs'))
         & (Join-Path $outputDir 'DailyTimer.LayoutTests.exe') (Join-Path $projectRoot 'src\DailyTimer.App\MainWindow.xaml')
         if ($LASTEXITCODE -ne 0) { throw 'Window layout tests failed.' }
     }

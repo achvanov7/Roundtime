@@ -17,18 +17,21 @@ namespace DailyTimer.Core
         private MeetingSettings live;
         private MeetingState pausedPhase;
         private double lastTime;
+        private double turnPersonalAllowance;
+        private double personalRemaining;
         private bool sharedAlerted;
 
         public event Action<AlertKind> Alert;
         public event Action<Speaker, bool> TurnCompleted;
         public MeetingState State { get; private set; }
         public Speaker ActiveSpeaker { get; private set; }
-        public double PersonalRemaining { get; private set; }
+        public double PersonalRemaining { get { return State == MeetingState.Ready ? PersonalAllowance : personalRemaining; } }
         public double SharedRemaining { get; private set; }
         public ReadOnlyCollection<Speaker> Speakers { get; private set; }
         public bool HasStarted { get { return State != MeetingState.Ready; } }
         public MeetingState Phase { get { return State == MeetingState.Paused ? pausedPhase : State; } }
-        public double PersonalAllowance { get { return live.PersonalSeconds; } }
+        public bool CanReturnToSpeaker { get { return Phase == MeetingState.Discussion && PersonalRemaining > 0; } }
+        public double PersonalAllowance { get { return State == MeetingState.Ready ? AllowanceFor(speakers.FirstOrDefault()) : turnPersonalAllowance; } }
         public double SharedAllowance { get { return live.SharedSeconds; } }
 
         public Meeting(Func<double> clock, IEnumerable<Speaker> speakers, MeetingSettings settings)
@@ -54,9 +57,9 @@ namespace DailyTimer.Core
             bool sharedExpired = false;
             if (State == MeetingState.Speaking)
             {
-                if (elapsed < PersonalRemaining) { PersonalRemaining -= elapsed; return; }
-                elapsed -= PersonalRemaining;
-                PersonalRemaining = 0;
+                if (elapsed < personalRemaining) { personalRemaining -= elapsed; return; }
+                elapsed -= personalRemaining;
+                personalRemaining = 0;
                 State = MeetingState.Discussion;
                 personalExpired = true;
             }
@@ -83,7 +86,11 @@ namespace DailyTimer.Core
             if (State == MeetingState.Ready)
             {
                 ActiveSpeaker = speakers.FirstOrDefault(s => !s.Completed);
-                if (ActiveSpeaker != null) State = MeetingState.Speaking;
+                if (ActiveSpeaker != null)
+                {
+                    StartPersonalTimer();
+                    State = MeetingState.Speaking;
+                }
             }
             else if (State == MeetingState.Paused) State = pausedPhase;
             else if (State == MeetingState.Speaking || State == MeetingState.Discussion)
@@ -98,6 +105,14 @@ namespace DailyTimer.Core
         {
             Tick();
             if (State == MeetingState.Speaking) State = MeetingState.Discussion;
+        }
+
+        public void ReturnToSpeaker()
+        {
+            Tick();
+            if (!CanReturnToSpeaker) return;
+            if (State == MeetingState.Paused) pausedPhase = MeetingState.Speaking;
+            else State = MeetingState.Speaking;
         }
 
         public void Next()
@@ -118,7 +133,7 @@ namespace DailyTimer.Core
             if (ActiveSpeaker == null) State = MeetingState.Finished;
             else
             {
-                PersonalRemaining = live.PersonalSeconds;
+                StartPersonalTimer();
                 State = paused ? MeetingState.Paused : MeetingState.Speaking;
                 pausedPhase = MeetingState.Speaking;
             }
@@ -130,12 +145,23 @@ namespace DailyTimer.Core
             live = configured.Copy();
             foreach (var s in speakers) s.Completed = false;
             ActiveSpeaker = null;
-            PersonalRemaining = live.PersonalSeconds;
+            StartPersonalTimer();
             SharedRemaining = live.SharedSeconds;
             sharedAlerted = false;
             State = MeetingState.Ready;
             pausedPhase = MeetingState.Speaking;
             lastTime = clock();
+        }
+
+        private double AllowanceFor(Speaker speaker)
+        {
+            return speaker != null && speaker.PersonalSeconds.HasValue ? speaker.PersonalSeconds.Value : live.PersonalSeconds;
+        }
+
+        private void StartPersonalTimer()
+        {
+            turnPersonalAllowance = AllowanceFor(ActiveSpeaker);
+            personalRemaining = turnPersonalAllowance;
         }
 
         public void Configure(MeetingSettings settings)
